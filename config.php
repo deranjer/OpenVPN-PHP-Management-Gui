@@ -1,10 +1,9 @@
 <?php 
-session_start();
-include 'session.php';
+ session_start();
+ include 'sidebar.php';
 include 'functions.php';
-include 'sidebar.php';
-//error_reporting(E_ALL); 
-//ini_set('display_errors', 'on'); 
+error_reporting(E_ALL); 
+ini_set('display_errors', 'on'); 
 set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
 		include('Net/SSH2.php');
 ?>
@@ -22,8 +21,13 @@ set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
 		//read the settings we created in install.php
 		read_config_file();
 		$config_file_with_path = $config_dir.$config_file;
-		read_openvpn_config($config_file_with_path);
-		
+		//TODO.. throw in a test to make sure our $config_file_with_path ends in conf....
+		//So we don't copy the folder itself to /etc/openvpn and cause heart attacks.
+		echo "<h3>Reading config from: $config_file_with_path</h3><br />";
+		$vpn_config = read_openvpn_config($config_file_with_path);
+		//THIS TIME WILL DUMP TO GLOBAL... maybe change in future? //TODO
+		extract($vpn_config);
+		//Now.. if we updated the config file.....
 		if ((isset($_GET['action'])) and ($_GET['action'] == "update")){
 			
 			$config_file_temp = $config_file;
@@ -78,6 +82,7 @@ set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
 		echo "<a class='btn btn-primary' href='index.php'>I will restart manually</a>";
 		exit;
 		}
+		//End update file... now checking for a restart command....
 		if ((isset($_GET['action'])) and ($_GET['action'] == "restart")){
 			if (! (isset($_SESSION['password']))){
 					//will start the session if needed, and return to config.php?action=restart
@@ -122,6 +127,7 @@ set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
 				echo "<a class='btn' href='index.php'>Back to Home</a>";
 				exit;
 				}
+				//And... checking if we need to revert back to old/default config
 		if ((isset($_GET['action'])) and ($_GET['action'] == "revert")){
 				//TODO Session variables
 				$password = 'RHB12+ADMIN';
@@ -156,6 +162,7 @@ set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
 				echo "<a class='btn' href='index.php'>Back to Home</a>";
 				exit;
 			}
+		//exit revert loop...
 		
 		
 		echo "<form class='well span6' action='config.php?action=update' method='post'>";
@@ -296,7 +303,6 @@ set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
     
 <!-- Required to have 2 divs at the end to close sidebar.php -->        
 
-</div>
 
 </body>
 </html>

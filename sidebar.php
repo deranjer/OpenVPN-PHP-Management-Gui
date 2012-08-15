@@ -13,6 +13,7 @@
 					<li><a href="connections.php" id="connections">Connections</a></li>
 					<li><a href="config.php" id="configs">Config</a></li>
 					<li><a href="certs.php" id="certs">Manage Certs</a></li>
+					<li><a href="advanced.php" id="advanced">Advanced</a></li>
 				</ul>
         </div>
 	</div>

@@ -27,11 +27,11 @@ function start_session($source){
 			echo "<div class='span 10'>";
 		if (!(isset($_POST['password']))){
 		?>
-		<h2>Sudo Access Required</h2>
+		<h2>ROOT Access Required</h2>
 		<br />
 		<b>Heres the nitty gritty:</b>
 		<br />
-		In this development version OpenVPN Gui will require a sudo password.
+		In this development version OpenVPN Gui will require a root password.
 		<br />
 		<br />
 		It will currently acquire the password and POST it to a session variable.

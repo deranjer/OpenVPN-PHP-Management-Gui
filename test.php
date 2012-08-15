@@ -22,7 +22,42 @@ $ssh = new Net_SSH2('localhost');
 
 			echo "<h2>Check for errors, then continue to <a href='index.php'>Home</a></h2>";
 				
-				
+				$num_keys = 0;
+		//need to export list of files so we can extract key names.
+		$ssh->write("ls $key_dir > key_list.txt\n");
+		$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+		//list should now be stored in curr_work_dir, php will read, extract key names.
+		$key_filename = "key_list.txt";
+		//$contents = file($key_filename); 
+		//$string = implode($contents); 
+
+		//echo $string; 
+		echo "<br />";
+		echo "<br />";
+		echo "<br />";
+		echo "<br />";
+		echo "<br />";
+		echo "<br />";
+		echo "<br />";
+		
+		
+		
+		$key_dir_files = file($key_filename, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+		//Counting the keys in the keydir
+		echo "Printing array<br />";
+		print_r($key_dir_files);
+		echo str_repeat(' ',1024*64);
+		foreach ($key_dir_files as $current_file){
+			echo "<br />$current_file<br />";
+			if (fnmatch("*.csr", $current_file)){
+				//first setup, so overwrite old keys.conf if it exists, and start again.
+				if ($num_keys == 0){
+					file_put_contents("keys.conf", $current_file.PHP_EOL);
+				} else{file_put_contents("keys.conf", $current_file.PHP_EOL, FILE_APPEND | LOCK_EX);}
+				$key_array[$num_keys] = $current_file;
+				$num_keys++;
+			}        
+		}
 				
 				
 				exit;

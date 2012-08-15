@@ -13,10 +13,12 @@ include('Net/SSH2.php');
         <link type="text/css" rel="stylesheet" href="css/bootstrap.css"/>
 </head>
 <?php
+//TODO: Functionize this entire page... or at least parts of this... could save a lot of lines and simplify
 read_config_file();
 $default_pkitool_location = $config_dir . "/easy-rsa/2.0/pkitool";
 $var_file = $config_dir . "easy-rsa/2.0/vars";
 $var_dir = $config_dir . "easy-rsa/2.0/";
+$key_dir = $var_dir . "keys/";
 //$a_var_lines = file($var_file);
 if ($_GET['action'] == "initial-setup"){
 	if (! (isset($_SESSION['password']))){
@@ -37,6 +39,9 @@ if ($_GET['action'] == "initial-setup"){
 	
 	?>
 	<form class="well span5" action="create_certs.php?vars=yes" method="post" onsubmit="">
+	  <span>Note:  Server and Client names CANNOT contain spaces!</span>
+	  <br />
+	  <br />
 	  <label><b>Key Country</b></label>
 	  <input type="text" class="span3" name="key_country" placeholder="US">
 	  <span class="help-block">Country Key is created in...</span>
@@ -172,7 +177,6 @@ if ($_GET['action'] == "initial-setup"){
 		
 			//now that var file is edited, continue with new setup with sudo, not root
 			//TODO.. add support for password when generating keys
-			//TODO.. Build default .conf file from settings...
 
 			//todo: change the following block to ssh->exec
 			echo "<pre>Running . ./vars</pre>";
@@ -305,11 +309,10 @@ if ($_GET['action'] == "initial-setup"){
 			echo str_repeat(' ',1024*64);
 			
 						
-			//building dh... TODO...may need to background?  PHP may time out...
+			//building dh...
 			echo "<pre>Building DH... ./build-dh &</pre>";
 			$ssh->write("cd ".$var_dir."; ./build-dh &\n");
 			//$OPENSSL dhparam -out ${KEY_DIR}/dh${KEY_SIZE}.pem ${KEY_SIZE}
-			//$ssh->write("cd ".$var_dir."; ./build-dh &\n");
 			$dh_background = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 			echo "<pre>$dh_background</pre>";
 			//need to get the PID of the background build-dh process so we can make sure it completes
@@ -391,6 +394,32 @@ if ($_GET['action'] == "initial-setup"){
 		$ssh->write("mv openvpn.conf openvpn-default.conf\n");
 		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 		echo "<pre>$result</pre>";
+		//Now updating config file with the new location of our config file.
+		$config_file = "openvpn.conf";
+		file_put_contents("settings.conf", "config_file:" . $config_file.PHP_EOL, FILE_APPEND | LOCK_EX);
+
+		//Now scanning the key directory for keys, and adding the names to keys.conf
+		//we know the key dir now, since this is a new setup
+		$num_keys = 0;
+		//need to export list of files so we can extract key names.
+		$ssh->write("ls $key_dir > key_list.txt\n");
+		$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+		//list should now be stored in curr_work_dir, php will read, extract key names.
+		$key_filename = "key_list.txt";
+		$key_dir_files = file($key_filename, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+		echo "<h3>Reading list of keys.... </h3><br />";
+		//Counting the keys in the keydir
+		echo str_repeat(' ',1024*64);
+		foreach ($key_dir_files as $current_file){
+			if (fnmatch("*.csr", $current_file)){
+				//first setup, so overwrite old keys.conf if it exists, and start again.
+				if ($num_keys == 0){
+					file_put_contents("keys.conf", $current_file.PHP_EOL);
+				} else{file_put_contents("keys.conf", $current_file.PHP_EOL, FILE_APPEND | LOCK_EX);}
+				$key_array[$num_keys] = $current_file;
+				$num_keys++;
+			}        
+		}
 		
 		//now checking on dh1024.pem to see if process is done
 		echo "Now waiting for DH to complete.....<br />";
@@ -429,7 +458,7 @@ if ($_GET['action'] == "initial-setup"){
 				echo "DH STILL not completed.... waiting...<br />";
 				echo "<br /><br /><br /><br /><br />";
 				echo str_repeat(' ',1024*64);
-				sleep(30);
+				sleep(35);
 				exec("pgrep -fl ./build-dh", $output, $return);
 				//	print_r($output);
 				foreach($output as $oi=>$o) {
