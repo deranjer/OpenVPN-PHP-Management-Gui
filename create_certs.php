@@ -1,6 +1,4 @@
 <?php
-session_start();
-require 'session.php';
 //error_reporting(E_ALL); 
 //ini_set('display_errors', 'on'); 
 include 'functions.php';
@@ -386,6 +384,7 @@ if ($_GET['action'] == "initial-setup"){
 		file_put_contents("openvpn.conf", "verb 3".PHP_EOL, FILE_APPEND | LOCK_EX);
 		file_put_contents("openvpn.conf", "persist-key".PHP_EOL, FILE_APPEND | LOCK_EX);
 		file_put_contents("openvpn.conf", "persist-tun".PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents("openvpn.conf", "comp-lzo".PHP_EOL, FILE_APPEND | LOCK_EX);
 		echo str_repeat(' ',1024*64);
 		echo "<pre>Backing up default conf file, copying file to $config_dir</pre>";
 		$ssh->write("cd ".$curr_work_dir."; cp openvpn.conf $config_dir\n");
@@ -494,14 +493,21 @@ if ($_GET['action'] == "initial-setup"){
 		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 		echo "<pre>$result</pre>";
 		echo str_repeat(' ',1024*64);
-	
+
 		echo "<pre>Should be ready to start OpenVPN!</pre>";
 		echo str_repeat(' ',1024*64);
 		$ssh->write("/etc/init.d/openvpn start\n");
 		$ssh->setTimeout(10);
 		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 			echo "<pre>$result</pre>";
-		echo "<h2>Check for errors, then continue to <a href='index.php'>Home</a></h2>";
+		echo "<h2>Check for errors, then continue to the install script one more time <a href='install.php?action=final_check&client_name=$client_name'>Install</a></h2>";
+
+	
+	
+		
+		
+		
+		
 		exit;
 
 	}

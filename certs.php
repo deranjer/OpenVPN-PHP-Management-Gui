@@ -38,7 +38,7 @@ include('Net/SSH2.php');
 			//Bet an actual programmer would know...
 			?>
 			Well.... we need to know your IP Address (if static) or dynamic host name (dyndns.org or similar)<br />
-			for the client config....
+			for the client config.... (You may have a server config now, but you will only be asked once)
 			<form class="" action="certs.php" method="get" onsubmit="">
 			<h3>Static IP address or hostname</h3>
 			<br />
@@ -59,53 +59,82 @@ include('Net/SSH2.php');
 		}
 		
 		//thats done... now to create the files for transfer/download
-		if($_GET['type'] == "download"){
+		if($_GET['type'] != "nothing"){
 		read_config_file();
 			echo "Keydir:$key_dir_name<br />";
 			echo "Type DOWNLOAD Selected... Preparing files...<br />";
 			//create tar file.... since it is still in the keys dir will need phpseclib for the first part
 			//Getting the cert name....
+			$send_type = $_GET['type'];
+			
 			$cert_name = $_GET['cert_name'];
+			
+			$cert_type = $_GET['cert_type'];
 			//first to generate a client config file!
 
 			//need to get the config_dir so function can read the server conf file...
 			//next need to get the ip address or host name of the server... required to create client config...
-			
-			$zip_file_name = create_client_config_and_send($cert_name, $config_dir, $config_file, $remote_value, $send_type, $key_dir_name);
-			//now that we have the name of the file.. send it to our download page
-			echo "<a href=Downloads/download.php?file=$zip_file_name>Download Page</a>";
-			
+			if ($cert_type = "client"){
+				$zip_file_name = create_client_config_and_send($cert_name, $config_dir, $config_file, $remote_value, $send_type, $key_dir_name);
+				//now that we have the name of the file.. send it to our download page
+				echo "<br /><a href=Downloads/download.php?file=$zip_file_name>Download Page</a>";			
+			}
+			if ($cert_type = "server"){
+				$zip_file_name = send_server_key($cert_name, $config_dir, $config_file, $remote_value, $send_type, $key_dir_name);
+							echo "<a href=Downloads/download.php?file=$zip_file_name>Download Page</a>";
+			}		
 			exit;
 		}
 	
 	
 	
 	}
-	//Are we creating a server cert??
-	if (isset($_GET['server_cert_name'])){
-		$server_cert_name = $_GET['server_cert_name'];
-		//need to pass $config_dir as well.. since it is in functions.php... can't grab variable from there.
-		create_server_key($server_cert_name, $config_dir);
-		//now need to know what to do with this newly generated key, send to another server, copy it to $config_dir... w/e
-		choose_key_send_method($server_cert_name, $key_dir, $config_dir);
-		
+	//creating server or client key
+	if (isset($_GET['cert_name'])){
+		if($_GET['action'] == "create_server"){	
+			$server_cert_name = $_GET['cert_name'];
+			//need to pass $config_dir as well.. since it is in functions.php... can't grab variable from there.
+			create_server_key($cert_name, $config_dir);
+			//now need to know what to do with this newly generated key, send to another server, copy it to $config_dir... w/e
+			$cert_type = "server"; //so we know not to create a client config.
+			choose_key_send_method($server_cert_name, $key_dir, $config_dir, $cert_type);
+		}
+		if($_GET['action'] == "create_client"){	
+			$cert_name = $_GET['cert_name'];
+			//need to pass $config_dir as well.. since it is in functions.php... can't grab variable from there.
+			create_client_key($cert_name, $config_dir);
+			//now need to know what to do with this newly generated key, send to another server, copy it to $config_dir... w/e
+			$cert_type = "client"; //so we know not to create a client config.
+			choose_key_send_method($cert_name, $key_dir, $config_dir, $cert_type);
+		}
 		//now need to update the key list
 		update_key_list($key_dir);
 		exit;
 	}
-	if ($_GET['action'] == "create_server"){
-	?>
-	<form class="" action="certs.php?action=create_server&" method="get" onsubmit="">
-		<h3>Cert name</h3>
-		<span>Note: Names CANNOT contain spaces!</span>
-		<br />
-		<br />
-		<input type="text" name="server_cert_name" class="span3" placeholder="Name of Server Cert">
-		<button type="submit" class="btn btn-primary">Submit</button>
-	</form>
-	</div>
-	<?php
-	exit;
+	
+	
+	if (($_GET['action'] == "create_server") or ($_GET['action'] == "create_client")){
+	
+		if ($_GET['action'] == "create_server"){
+		?>
+		<form class="" action="certs.php?action=create_server&" method="get" onsubmit="">
+		<?
+		}else{
+		?>
+		<form class="" action="certs.php?action=create_client&" method="get" onsubmit="">
+		<?
+		}
+                ?>
+			<h3>Cert name</h3>
+			<span>Note: Names CANNOT contain spaces!</span>
+			<br />
+			<br />
+			<input type="text" name="cert_name" class="span3" placeholder="Name of Server Cert">
+			<button type="submit" class="btn btn-primary">Submit</button>
+		</form>
+		</div>
+		<?php
+		exit;
 	}
 
 	?>

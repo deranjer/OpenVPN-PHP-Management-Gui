@@ -19,21 +19,20 @@ $easy_rsa_dir = '/usr/share/doc/openvpn/examples/easy-rsa/';
 //session_start HAS TO BE CALLED on every page reload... I THINK is more secure than storing session in global variable?
 //TODO see if we can store password securely OUTSIDE of session variable
 //Also, implement https for session variables
-session_start();
-require_once 'session.php'; //sets up session, gets username/password
+//session_start();
+//require 'session.php'; //sets up session, gets username/password
 require 'functions.php';
 set_include_path(get_include_path() . PATH_SEPARATOR . 'phpseclib');
 include('Net/SSH2.php');
-if (!(isset($_SESSION['password']))){
-	start_session('install.php'); //getting username and password for phpseclib ssh terminal
-}
+//if (!(isset($_SESSION['password']))){
+//	start_session('install.php'); //getting username and password for phpseclib ssh terminal
+//}
 
 //error_reporting(E_ALL); 
 //ini_set('display_errors', 'on'); 
 //functions.php includes session_start()
+
 ?>
-
-
 <!DOCTYPE HTML>
 <!--Setting up webpage -->
 <head>
@@ -102,7 +101,7 @@ if (!(isset($_SESSION['password']))){
                     echo "<div class='row'>";
                     echo "<div class='span3'>";
                     echo "Checking for config file......<br />";
-					echo "Checking for key directory......<br /><br />";
+					echo "Checking for key directory......<br />";
 					echo "Checking for ca keys......<br /><br />";
 					echo "Checking for server keys.....<br /><br />";
                     echo "</div>";
@@ -165,12 +164,17 @@ if (!(isset($_SESSION['password']))){
                             $key_dir_found = "yes";
 							file_put_contents("settings.conf", "key_dir:" . $key_dir.PHP_EOL, FILE_APPEND | LOCK_EX);
 						}else{echo "<font color='B22222'>Warn!</font> Non Critical.... Unable to locate key directory in <b>$config_dir</b> or <b>" . $config_dir . "easy-rsa/2.0/keys</b><br />";}
-					}
-				
+					}	
+		
                     if ($config_file_found == "yes"){
                         echo "<font color='OOFFOO'>Okay!</font> Found config file <b>$config_file</b> in <b>$config_dir</b><br />";
 						   //if we can't find any files ending in .conf
                     } else {echo "<font color='B22222'>Error!</font> Unable to locate config file in <b>$config_dir</b><br />";}
+					
+									
+					if ($key_dir_found == "yes"){
+                        echo "<font color='OOFFOO'>Okay!</font> Found key dir <b>$key_dir</b><br />";
+					}	
 					
 					//TODO remove debug
 					//TODO add key dir setting for /easy-rsa/2.0
@@ -196,6 +200,7 @@ if (!(isset($_SESSION['password']))){
                     }else{echo "<font color='B22222'>Error!</font> Server crt NOT FOUND!<br />";}
 					
                     echo "</div>";
+					//TODO!! Remove this to read the index file in key dir... as root
 					if ($key_dir_found == "yes"){
 						echo "Number of keys found in key directory is: $num_keys</div></div></div>";
 							if ($num_keys == 0){
@@ -240,11 +245,8 @@ if (!(isset($_SESSION['password']))){
 			//will need to do the pkitool test now.... TODO move pkitool to previous heading so don't have to test for it twice :(
 			//Will reach this if the "initial-setup" button is pressed in code block after this
 			If ($_GET['action'] == "initial-setup"){
-			$default_pkitool_location = $config_dir . "/easy-rsa/2.0/pkitool";
-			if (!(file_exists($default_pkitool_location))){
-				echo "<font color='B22222'>Error!</font> PKITOOL not found... required, will attempt to copy into $config_dir<br />";
-				if (! (isset($_SESSION['password']))){
-					start_session();
+			if (! (isset($_SESSION['password']))){
+					start_session('install.php');
 				}
 				$password = stripslashes(trim($_SESSION['password']));
 				$username = stripslashes(trim($_SESSION['username']));
@@ -255,6 +257,10 @@ if (!(isset($_SESSION['password']))){
 				if (!$ssh->login($username, $password)) {
 					exit('Login Failed');
 				}	
+			$default_pkitool_location = $config_dir . "/easy-rsa/2.0/pkitool";
+			if (!(file_exists($default_pkitool_location))){
+				echo "<font color='B22222'>Error!</font> PKITOOL not found... required, will attempt to copy into $config_dir<br />";
+				
 				echo $ssh->exec("sudo cp -r $easy_rsa_dir $config_dir");
 				echo "Check for errors!.. Proceeding...<br />";
 			} else {echo "PKITOOL found, can create certs....<br />";}
@@ -276,12 +282,27 @@ if (!(isset($_SESSION['password']))){
 					exit;
 					//However, if any other keys/crts missing... will need to force an initial setup, since openvpn should not work if these are missing....
 				} elseif (($_GET['action'] != "initial-setup") and ($server_crt_found != "yes") or ($server_key_found != "yes") or ($ca_crt_found != "yes"))  {
+					//TODO!!! session.php hangs on handoff, source issue
 					echo "</div>";
 					echo "One or more critical errors found, will need to run initial setup!<br />";
-					echo "<a class='btn btn-danger' href='install.php?action=initial-setup'>Start Initial Setup</a>";
+					echo "<a class='btn btn-danger' href='install.php?action=initial-setup&source=installer'>Start Initial Setup</a>";
 					exit;
 				}	
 			}
+			
+			
+			//If returning from initial setup, check for client name of certs
+			if (isset($_GET['client_name'])){
+				$client_name = $_GET['client_name'];
+				if ($client_name != ""){
+				echo "<br />Now you need to handle the client key that was created....<br />";
+				echo "<div class='span2 row-fluid'><a class='btn btn-primary' href='certs.php?action=create_client&cert_name=$client_name'>Move Client Key</a></div>";
+				exit;
+				}
+				echo "Continue to Home Page!  <a href='index.php>Home</a></h2>";
+			}
+			
+			
 			
 
 			//Checking if openvpn server is set up...

@@ -1,6 +1,6 @@
 <?php
-error_reporting(E_ALL); 
-ini_set('display_errors', 'on'); 
+//error_reporting(E_ALL); 
+//ini_set('display_errors', 'on'); 
 //session_start();
 include 'session.php';
 //include 'functions2.php';
@@ -162,7 +162,7 @@ function read_key_file(){
 function create_server_key($server_name, $config_dir){
 	//creating a server key... first, make sure i have root priv.
 	 if (! (isset($_SESSION['password']))){
-		 start_session('certs.php?action=create_server');
+		 start_session('certs.php?action=create_server&cert_name=$server_name');
 	 }
 	 $password = stripslashes(trim($_SESSION['password']));
 		 $username = stripslashes(trim($_SESSION['username']));
@@ -187,6 +187,39 @@ function create_server_key($server_name, $config_dir){
 	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	echo "<pre>Running Server Key Command... ./pkitool --server $server_name</pre>";
 	$ssh->write("cd ".$var_dir.";./pkitool --server ".$server_name."\n");
+	$ssh->setTimeout(10);
+	$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	echo "<pre>$result</pre>";	
+}
+
+function create_client_key($client_name, $config_dir){
+	//creating a client key... first, make sure i have root priv.
+	 if (! (isset($_SESSION['password']))){
+		 start_session('certs.php?action=create_client&cert_name=$client_name');
+	 }
+	 $password = stripslashes(trim($_SESSION['password']));
+		 $username = stripslashes(trim($_SESSION['username']));
+		 if ($username == ""){
+				 $username = "root";
+			 }
+	 $ssh = new Net_SSH2('localhost');
+	 if (!$ssh->login($username, $password)) {
+		 exit('Login Failed');
+	 }
+	$var_dir = $config_dir . "easy-rsa/2.0/";
+	//first, source vars
+	echo "<pre>Running . ./vars</pre>";
+	echo str_repeat(' ',1024*64);//purge buffer
+	$ssh->write("cd ".$var_dir.";source ./vars\n");
+	$ssh->setTimeout(10);
+	$output = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	echo "<pre>$output</pre>";
+	echo str_repeat(' ',1024*64);
+	
+	//building client key
+	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	echo "<pre>Running Client Key Command... ./pkitool --client $client_name</pre>";
+	$ssh->write("cd ".$var_dir.";./pkitool --client ".$client_name."\n");
 	$ssh->setTimeout(10);
 	$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	echo "<pre>$result</pre>";	
@@ -230,16 +263,19 @@ function update_key_list($key_dir){
 	}
 }
 
-function choose_key_send_method($cert_name, $key_dir, $config_dir){
+function choose_key_send_method($cert_name, $key_dir, $config_dir, $cert_type){
 	//TODO add bundle option to send config as .ovpn -- see create_client_config func... maybe add code in there?
 	//TODO check certs.php... maybe do away with this function?
 	?>
 	What do you want to do with your new key <?php echo $cert_name;?> ?<br />
-	These actions will bundle <?php echo $cert_name;?>.crt, <?php echo $cert_name;?>.key, your ca.crt and <?php echo $cert_name;?>.conf into a zip file.<br />
+	If CLIENT key will bundle <?php echo $cert_name;?>.crt, <?php echo $cert_name;?>.key, your ca.crt and <?php echo $cert_name;?>.conf into a zip file.<br />
+	If SERVER key TODO
+	If CA key TODO
 	<div class="span 2">
-	<a class='btn btn-primary' href='certs.php?action=send_cert&type=nothing&cert_name=<?php echo $cert_name;?>'>Do Nothing</a><br /><br />
-	<a class='btn btn-primary' href='certs.php?action=send_cert&type=scp&cert_name=<?php echo $cert_name;?>'>SCP to another box</a><br /><br />
-	<a class='btn btn-primary' href='certs.php?action=send_cert&type=download&cert_name=<?php echo $cert_name;?>'>Give me a Download Link</a><br /><br />	
+	<a class='btn btn-primary' href='certs.php?action=send_cert&type=nothing&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Do Nothing</a><br /><br />
+	<a class='btn btn-primary' href='certs.php?action=send_cert&type=copy&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Copy to OpenVPN Config Directory</a><br /><br />
+	<a class='btn btn-primary' href='certs.php?action=send_cert&type=scp&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>SCP to another box</a><br /><br />
+	<a class='btn btn-primary' href='certs.php?action=send_cert&type=download&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Give me a Download Link</a><br /><br />	
 	<?php
 	exit;
 }
@@ -280,6 +316,7 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 			echo str_repeat(' ',1024*64); // flushing buffer
 			//Now writing the file.... 
 			//now the only lines we need to add to the default are the cert and key lines.....
+			//TODO! CHeck if comp-lzo is present in server config
 			file_put_contents($client_config_file_default, "client".PHP_EOL);
 			file_put_contents($client_config_file_default, "dev " . $dev_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
 			file_put_contents($client_config_file_default, "proto " . $proto_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);	
@@ -297,16 +334,17 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 			echo "Whoops.. no config found at $configdir.$config_file!<br />Exiting.....try the install file again??<br />";
 		}	
 	}
-	if (file_exists("openvpn-client-default.conf")){
-	$vpn_config = read_openvpn_config($config_dir.$config_file);
-			extract($vpn_config);
+	if ($send_type == "download"){
+		$vpn_config = read_openvpn_config($config_dir.$config_file);
+		extract($vpn_config);
 		echo "Default client file exists... <br />";
 		echo "Now copying to new config $cert_name.conf<br />";
 		copy("openvpn-client-default.conf", "$cert_name.conf");
 		//New Conf file should exist.... Now edit specifics...
 		if (file_exists("$cert_name.conf")){
-			file_put_contents($client_config_file_default, "cert " . $cert_name . ".crt".PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "key " . $cert_name . ".key".PHP_EOL, FILE_APPEND | LOCK_EX);
+			$client_config = "$cert_name.conf";
+			file_put_contents($client_config, "cert " . $cert_name . ".crt".PHP_EOL, FILE_APPEND | LOCK_EX);
+			file_put_contents($client_config, "key " . $cert_name . ".key".PHP_EOL, FILE_APPEND | LOCK_EX);
 		} else {echo "Error... client config file not found?<br />"; exit;}
 		//Finding what dir 
 		$curr_work_dir = getcwd();
@@ -344,11 +382,8 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 		sleep(5);
 		// return name of zip file, will use that to generate download link
 		return $result;
-		
 		exit;
-
 	}
-	echo "FINAL HERE!<br />";
 }
 	
 //Credit to David Walsh (davidwalsh.name/create-zip-php) for this function
@@ -397,7 +432,6 @@ function create_zip($files = array(),$destination = '', $cert_name, $overwrite =
     //debug
     echo 'The zip archive contains ',$zip->numFiles,' files with a status of ',$zip->status;
 	echo "<br />";
-	echo "Zero is good....<br />";
 	$zip->addFile($file);
 	
     //close the zip -- done!
