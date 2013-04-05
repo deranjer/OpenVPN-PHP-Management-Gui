@@ -1,6 +1,6 @@
 <?php
-//error_reporting(E_ALL); 
-//ini_set('display_errors', 'on'); 
+error_reporting(E_ALL); 
+ini_set('display_errors', 'on'); 
 //session_start();
 include 'session.php';
 //include 'functions2.php';
@@ -218,8 +218,8 @@ function create_client_key($client_name, $config_dir){
 	
 	//building client key
 	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-	echo "<pre>Running Client Key Command... ./pkitool --client $client_name</pre>";
-	$ssh->write("cd ".$var_dir.";./pkitool --client ".$client_name."\n");
+	echo "<pre>Running Client Key Command... ./pkitool $client_name</pre>";
+	$ssh->write("cd ".$var_dir.";./pkitool ".$client_name."\n");
 	$ssh->setTimeout(10);
 	$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	echo "<pre>$result</pre>";	
@@ -334,48 +334,49 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 			echo "Whoops.. no config found at $configdir.$config_file!<br />Exiting.....try the install file again??<br />";
 		}	
 	}
-	if ($send_type == "download"){
-		$vpn_config = read_openvpn_config($config_dir.$config_file);
-		extract($vpn_config);
-		echo "Default client file exists... <br />";
-		echo "Now copying to new config $cert_name.conf<br />";
-		copy("openvpn-client-default.conf", "$cert_name.conf");
-		//New Conf file should exist.... Now edit specifics...
-		if (file_exists("$cert_name.conf")){
-			$client_config = "$cert_name.conf";
-			file_put_contents($client_config, "cert " . $cert_name . ".crt".PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config, "key " . $cert_name . ".key".PHP_EOL, FILE_APPEND | LOCK_EX);
-		} else {echo "Error... client config file not found?<br />"; exit;}
-		//Finding what dir 
-		$curr_work_dir = getcwd();
-		echo "Copying needed files...<br />";
-		//Now copying all the necc. sh!t to the root folder... then zip it? tar it? idk.. prolly zip
-		$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-		$ssh->write("cd $key_dir_name;cp $cert_name.key $ca_values[1] $cert_name.crt $curr_work_dir\n");
-		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-		echo "<pre>$result</pre>";
-		//HAVE to change the permissions on *.key... or php can't touch it
-		echo "Have to change permissions on the *.key file.. or php can't touch..<br />";
-		$ssh->write("cd $curr_work_dir;chmod 555 $cert_name.key\n");
-		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-		echo "<pre>$result</pre>";
-		echo str_repeat(' ',1024*64);
-		//create array of files to zip
-		$files_to_zip = array(
-		"$cert_name.crt",
-		"$cert_name.key",
-		"$ca_values[1]",
-		"$cert_name.conf",
-		);
-		echo "Creating zip file $cert_name.zip<br />";
-		echo str_repeat(' ',1024*64);
-		$result = create_zip($files_to_zip, "$cert_name.zip", $cert_name);
-		// unlink every other file...
-		unlink("$cert_name.crt");
-		unlink("$cert_name.key");
-		unlink("$ca_values[1]");
-		unlink("$cert_name.conf");
-		
+	$vpn_config = read_openvpn_config($config_dir.$config_file);
+	extract($vpn_config);
+	echo "Default client file exists... <br />";
+	echo "Now copying to new config $cert_name.conf<br />";
+	copy("openvpn-client-default.conf", "$cert_name.conf");
+	//New Conf file should exist.... Now edit specifics...
+	if (file_exists("$cert_name.conf")){
+		$client_config = "$cert_name.conf";
+		file_put_contents($client_config, "cert " . $cert_name . ".crt".PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config, "key " . $cert_name . ".key".PHP_EOL, FILE_APPEND | LOCK_EX);
+	} else {echo "Error... client config file not found?<br />"; exit;}
+	//Finding what dir 
+	$curr_work_dir = getcwd();
+	echo "Copying needed files...<br />";
+	//Now copying all the necc. sh!t to the root folder... then zip it? tar it? idk.. prolly zip
+	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	$ssh->write("cd $key_dir_name;cp $cert_name.key $ca_values[1] $cert_name.crt $curr_work_dir\n");
+	$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	echo "<pre>$result</pre>";
+	//HAVE to change the permissions on *.key... or php can't touch it
+	echo "Have to change permissions on the *.key file.. or php can't touch..<br />";
+	$ssh->write("cd $curr_work_dir;chmod 555 $cert_name.key\n");
+	$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	echo "<pre>$result</pre>";
+	echo str_repeat(' ',1024*64);
+	//create array of files to zip
+	$files_to_zip = array(
+	"$cert_name.crt",
+	"$cert_name.key",
+	"$ca_values[1]",
+	"$cert_name.conf",
+	);
+	echo "Creating zip file <b>$cert_name.zip</b><br />";
+	echo str_repeat(' ',1024*64);
+	$result = create_zip($files_to_zip, "$cert_name.zip", $cert_name);
+	// unlink every other file...
+	unlink("$cert_name.crt");
+	unlink("$cert_name.key");
+	unlink("$ca_values[1]");
+	unlink("$cert_name.conf");
+	
+	if ($send_type == "download"){	
+		echo "<br /> Download transfer type selected!";
 		echo "<br />";
 		echo "Result:$result";
 		echo str_repeat(' ',1024*64);
@@ -384,6 +385,21 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 		return $result;
 		exit;
 	}
+	if ($send_type == "scp"){
+		echo "SCP transfer type selected!";
+		echo str_repeat(' ',1024*64);
+		$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+		$ssh->write("ls\n");
+		//$ssh->write("cd $curr_work_dir;scp $cert_name.zip $username@$remote_host:$remote_dir\n");
+		//$ssh->setTimeout(10);
+		//sleep(5);
+		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+		echo "<pre>$result</pre>";
+		echo str_repeat(' ',1024*64);
+		echo "here!";
+		exit;
+	}
+		
 }
 	
 //Credit to David Walsh (davidwalsh.name/create-zip-php) for this function

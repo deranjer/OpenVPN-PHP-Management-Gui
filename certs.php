@@ -61,8 +61,8 @@ include('Net/SSH2.php');
 		//thats done... now to create the files for transfer/download
 		if($_GET['type'] != "nothing"){
 		read_config_file();
-			echo "Keydir:$key_dir_name<br />";
-			echo "Type DOWNLOAD Selected... Preparing files...<br />";
+			//echo "Keydir:$key_dir_name<br />";
+			//echo "Type DOWNLOAD Selected... Preparing files...<br />";
 			//create tar file.... since it is still in the keys dir will need phpseclib for the first part
 			//Getting the cert name....
 			$send_type = $_GET['type'];
@@ -77,7 +77,8 @@ include('Net/SSH2.php');
 			if ($cert_type = "client"){
 				$zip_file_name = create_client_config_and_send($cert_name, $config_dir, $config_file, $remote_value, $send_type, $key_dir_name);
 				//now that we have the name of the file.. send it to our download page
-				echo "<br /><a href=Downloads/download.php?file=$zip_file_name>Download Page</a>";			
+				echo "<br /><a href=Downloads/download.php?file=$zip_file_name>Download Page</a>";
+				exit;
 			}
 			if ($cert_type = "server"){
 				$zip_file_name = send_server_key($cert_name, $config_dir, $config_file, $remote_value, $send_type, $key_dir_name);
@@ -114,29 +115,31 @@ include('Net/SSH2.php');
 	
 	
 	if (($_GET['action'] == "create_server") or ($_GET['action'] == "create_client")){
-	
-		if ($_GET['action'] == "create_server"){
 		?>
-		<form class="" action="certs.php?action=create_server&" method="get" onsubmit="">
+		<form class="" action="certs.php?" method="get" onsubmit="">
+		<h3>Cert name</h3>
+		<span>Note: Names CANNOT contain spaces!</span>
+		<br />
+		<br />
+		<? 
+		if ($_GET['action'] == "create_server"){ 
+		?> 
+		<input type="text" name="cert_name" class="span3" placeholder="Name of Server Cert">
+		<input type="hidden" name="action" value="create_server">			
 		<?
-		}else{
-		?>
-		<form class="" action="certs.php?action=create_client&" method="get" onsubmit="">
+		} else { //If creating a client certificate
+		?> 
+		<input type="text" name="cert_name" class="span3" placeholder="Name of Client Cert">
+		<input type="hidden" name="action" value="create_client">
 		<?
 		}
-                ?>
-			<h3>Cert name</h3>
-			<span>Note: Names CANNOT contain spaces!</span>
-			<br />
-			<br />
-			<input type="text" name="cert_name" class="span3" placeholder="Name of Server Cert">
-			<button type="submit" class="btn btn-primary">Submit</button>
+		?>
+		<button type="submit" class="btn btn-primary">Submit</button>
 		</form>
 		</div>
 		<?php
 		exit;
 	}
-
 	?>
 		<div class="span9"> 
 			<div class="row-fluid">
