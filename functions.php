@@ -1,9 +1,12 @@
 <?php
-error_reporting(E_ALL); 
-ini_set('display_errors', 'on'); 
 //session_start();
-include 'session.php';
-//include 'functions2.php';
+require_once 'session.php';
+if ($_SESSION['debug'] == True) {
+	echo "In debug mode!";
+	error_reporting(E_ALL); 
+	ini_set('display_errors', 'on');
+}	
+
 //Contains most the functions called by openvpn gui
 function read_openvpn_config($config_file_name){
 	//Global $a_config_lines, $port_values, $proto_values, $dev_values, $ca_values, $key_values, $crt_values, $key_values, $group_values, $user_values, $dh_values, $server_values, $ifconfig_pool_values, $keepalive_values, $comp_values, $verb_values, $status_values, $management_values, $a_extra_config_settings;
