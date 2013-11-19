@@ -139,34 +139,38 @@ include('Net/SSH2.php');
                     //setting default values as no for some variables
                     $key_dir_found = "no";
                     //Next loop will loop through files again, looking for values found in config file (validity check)
+                    $ca_crt_found = "no";
+                    $ca_key_found = "no";
+                    $server_key_found = "no";
+                    $server_crt_found = "no";
                     foreach($config_dir_files as $current_file){ //looping through files in config dir
                         if (fnmatch("keys", $current_file)){
                             $key_dir = $config_dir . "$current_file";
                             $key_dir_found = "yes";
                             file_put_contents("settings.conf", "key_dir:" . $key_dir.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        } else {$key_dir_found = "no";}
+                        }
                         if ($ca_crt_name == $current_file){
                                 $ca_crt_file = $current_file;
                                 $ca_crt_found = "yes";
                                 file_put_contents("settings.conf", "ca_crt_name:" . $ca_crt_name.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        } else {$ca_crt_found = "no";}
+                        }
                         if ($ca_key_name == $current_file){
                                 $ca_key_file = $current_file;
                                 $ca_key_found = "yes";
                                 file_put_contents("settings.conf", "ca_key_name:" . $ca_key_name.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        } else {$ca_key_found = "no";}
+                        }
                         //AND if there aren't any client keys located in config_dir
                         if ($server_key_name == $current_file){
                                 $server_key_file = $current_file;
                                 $server_key_found = "yes";
                                 file_put_contents("settings.conf", "server_key_file:" . $server_key_file.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        } else {$server_key_found = "no";}
+                        }
                         if ($server_crt_name == $current_file){
                                 $server_crt_file = $current_file;
                                 $server_crt_found = "yes";
                                 $server_crt_message = "<font color='OOFFOO'>Success!</font> Server crt found: $current_file <br />";
                                 file_put_contents("settings.conf", "server_crt_file:" . $server_crt_file.PHP_EOL, FILE_APPEND | LOCK_EX);
-                        } else {$server_crt_found = "no";}
+                        }
                     }
 					//Looking for config file		
                     if ($config_file_found == "yes"){
@@ -196,19 +200,19 @@ include('Net/SSH2.php');
 
                     if ($ca_key_found == "yes"){
                         echo "<font color='OOFFOO'>Success!</font> CA key found: <b>$ca_key_file</b><br /><br />";
-                    }else{echo "<font color='B22222'>Warn!</font>  Not Critical! CA key not found.<br /><br />";}
+                    }else{echo "<font color='B22222'>Warn!</font>  Not Critical! CA key not found. (looking for $ca_key_name)<br /><br />";}
 					
                     if ($ca_crt_found == "yes"){
                             echo "<font color='OOFFOO'>Success!</font> CA crt found: <b>$ca_crt_file</b> <br />";
-                    }else{echo "<font color='B22222'>Error!</font>  CA crt file NOT FOUND!.<br />";}
+                    }else{echo "<font color='B22222'>Error!</font>  CA crt file NOT FOUND!. (looking for $ca_crt_name)<br />";}
 					
                     if ($server_key_found == "yes"){
                             echo "<font color='OOFFOO'>Success!</font> Server key found: <b>$server_key_file</b> <br />";
-                    }else{echo "<font color='B22222'>Error!</font> Server key NOT FOUND!<br />";}
+                    }else{echo "<font color='B22222'>Error!</font> Server key NOT FOUND! (looking for $server_key_name)<br />";}
 					
                     if ($server_crt_found == "yes"){
                             echo "<font color='OOFFOO'>Success!</font> Server crt found: <b>$server_crt_file</b> <br /><br />";
-                    }else{echo "<font color='B22222'>Error!</font> Server crt NOT FOUND!<br /><br />";}
+                    }else{echo "<font color='B22222'>Error!</font> Server crt NOT FOUND! (looking for $server_crt_name)<br /><br />";}
 					
                     //Looking for PKITOOL and OPENSSL.CNF
                     $default_pkitool_location = $config_dir . "easy-rsa/2.0/pkitool";
