@@ -60,11 +60,13 @@ if ($_GET['action'] == "initial-setup"){
 	  <input type="text" class="span3" name="server_name" placeholder="myserver">
 	  <span class="help-block">For signing the server key name of key...</span>
 	  <br />
-	  <label><b>Client Name</b></label>
+	  <label><b>Client Name (Optional)</b></label>
 	  <input type="text" class="span3" name="client_name" placeholder="myclient">
 	  <span class="help-block">If you want to create client key now, enter name.</span>
-	  <span class="help-block">If not, leave empty.</span>
+	  <span class="help-block">If not, leave blank.  All other inputs are required.</span>
 	  <br />
+          <span class="help-block">Important!  After submit, there will be a very long processing time.</span>
+          <br />
 	  <button type="submit" class="btn">Submit</button>
 	</form>
 	<?php

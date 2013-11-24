@@ -110,7 +110,7 @@ include('Net/SSH2.php');
                     echo "<div class='row'>";
                     echo "<div class='span3'>";
                     echo "Checking for config file......<br /><br />";
-                    echo "Checking for key directory......<br /><br /><br />";
+                    echo "Checking for key directory......<br /><br />";
                     echo "Checking for ca keys......<br /><br />";
                     echo "Checking for server keys.....<br /><br /><br /><br />";
                     echo "Checking for pkitool.....<br /><br />";
@@ -337,10 +337,10 @@ include('Net/SSH2.php');
                                                 } else { "Unzip appears to have failed? " . $openssl_strip['filename'] . " not found!<br />";}
                                         }
                                 }
-                                echo "Using $latest_openssl! Renaming to openssl.cnf<br />";
+                                echo "Using $latest_openssl! Copying to openssl.cnf<br />";
                                 //TODO add this variable $easyrsa_dir far above
                                 $easyrsa_dir = $config_dir . "easy-rsa/2.0/";
-                                $output = $ssh->exec("cd $easyrsa_dir; sudo mv -v $latest_openssl openssl.cnf\n");
+                                $output = $ssh->exec("cd $easyrsa_dir; sudo cp -v $latest_openssl openssl.cnf\n");
                                 echo "<pre>$output</pre>";
 
                                 echo "<font color='OOFFOO'>Success!</font> Found: <b>openssl.cnf</b><br /><br />";	

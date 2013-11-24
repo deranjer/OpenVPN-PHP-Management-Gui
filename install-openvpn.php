@@ -111,7 +111,7 @@
 					 echo "<br />";
 					 echo "Please edit install.php to include this path if needed and re-run install.php";
 					 echo "<br />";
-					 echo "http://localhost/openvpn_gui/install.php";
+					 echo "<a class='btn btn-primary' href='install.php'>Re-run installer!</a>";
 					 exit;
 				 }
 		?>

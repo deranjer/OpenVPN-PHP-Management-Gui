@@ -392,10 +392,10 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 		echo "SCP transfer type selected!";
 		echo str_repeat(' ',1024*64);
 		$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-		$ssh->write("ls\n");
-		//$ssh->write("cd $curr_work_dir;scp $cert_name.zip $username@$remote_host:$remote_dir\n");
-		//$ssh->setTimeout(10);
-		//sleep(5);
+		//$ssh->write("ls\n");
+		$ssh->write("cd $curr_work_dir;scp $cert_name.zip $username@$remote_host:$remote_dir\n");
+		$ssh->setTimeout(10);
+		sleep(5);
 		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 		echo "<pre>$result</pre>";
 		echo str_repeat(' ',1024*64);
