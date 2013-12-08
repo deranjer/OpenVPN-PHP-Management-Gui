@@ -384,11 +384,12 @@ include('Net/SSH2.php');
                        
                    } else {
                        echo "<br />";
-                       echo "<font color='B22222'>Error!</font> Debian or Debian flavor not found, please install OpenVPN from<br />";
+                       echo "<font color='B22222'>Error!</font> Debian or Debian flavor not found, (or lsb_release command not found) please install OpenVPN from<br />";
                        echo "your Linux repo or compile from http://openvpn.net/index.php/download/community-downloads.html";
                        echo "<br />";
                        echo "<br />";
                        echo "<a class='btn btn-primary' href='install-openvpn.php'>My Distro uses apt-get, Install it!</a>";
+					   exit;
                        
                    }
                    

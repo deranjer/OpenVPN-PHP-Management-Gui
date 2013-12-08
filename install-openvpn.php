@@ -96,8 +96,7 @@
 					 echo "<br />";
 					 echo "Please edit install.php to include this path if needed and re-run install.php";
 					 echo "<br />";
-					 //TODO... get hearder?  If possible.. if they are not using localhost
-					 echo "http://localhost/openvpn_gui/install.php";
+					 echo "<a class='btn btn-primary' href='install.php'>Re-run installer!</a>";
 					 exit;
 				} else
 				echo "Unable to determine if openvpn is installing? Checking for bin....";
