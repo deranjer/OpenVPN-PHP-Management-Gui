@@ -23,6 +23,7 @@ If running a Debian based-system (apt-get based), the script will run apt-get in
 Recommended packages to install for Debian Systems:
 
 lsb-relase: For getting name and version of release
+
 sudo:  For the installer php script
 
 See http://www.youtube.com/watch?v=dNWub40l_GQ to see a video of OpenVPN-PHP-Gui in action (may be an older version). 
