@@ -213,6 +213,7 @@ function create_client_key($client_name, $config_dir){
 	//first, source vars
 	echo "<pre>Running . ./vars</pre>";
 	echo str_repeat(' ',1024*64);//purge buffer
+	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	$ssh->write("cd ".$var_dir.";source ./vars\n");
 	$ssh->setTimeout(10);
 	$output = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
