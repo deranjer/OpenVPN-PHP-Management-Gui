@@ -6,7 +6,6 @@ if ($_SESSION['debug'] == True) {
 	error_reporting(E_ALL); 
 	ini_set('display_errors', 'on');
 }	
-
 //Contains most the functions called by openvpn gui
 function read_openvpn_config($config_file_name){
 	//Global $a_config_lines, $port_values, $proto_values, $dev_values, $ca_values, $key_values, $crt_values, $key_values, $group_values, $user_values, $dh_values, $server_values, $ifconfig_pool_values, $keepalive_values, $comp_values, $verb_values, $status_values, $management_values, $a_extra_config_settings;
@@ -153,14 +152,6 @@ function read_config_file(){
 	}
 }
 
-function read_key_file(){
-	Global $a_key_list;
-	$a_key_list = array();
-	$a_key_file_lines = file("keys.conf");
-	foreach ($a_key_file_lines  as $line_num => $line) {
-	array_push($a_key_list, trim($line));
-	}
-}
 
 function create_server_key($server_name, $config_dir){
 	//creating a server key... first, make sure i have root priv.
@@ -212,24 +203,39 @@ function create_client_key($client_name, $config_dir){
 	$var_dir = $config_dir . "easy-rsa/2.0/";
 	//first, source vars
 	echo "<pre>Running . ./vars</pre>";
+	echo "<pre>VAR DIR: ".$var_dir."</pre>";
 	echo str_repeat(' ',1024*64);//purge buffer
 	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-	$ssh->write("cd ".$var_dir.";source ./vars\n");
+	$ssh->write("cd ".$var_dir.";. ./vars\n");
+	//$ssh->write("touch test.txt\n");
 	$ssh->setTimeout(10);
 	$output = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	echo "<pre>$output</pre>";
 	echo str_repeat(' ',1024*64);
 	
 	//building client key
-	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	//$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	echo "<pre>Running Client Key Command... ./pkitool $client_name</pre>";
 	$ssh->write("cd ".$var_dir.";./pkitool ".$client_name."\n");
 	$ssh->setTimeout(10);
 	$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	echo "<pre>$result</pre>";	
 }
+//reading the key file, getting CN names for list
+//TODO, get more information from file
+function read_key_file(){
+	Global $a_key_list;
+	$a_key_list = array();
+	$a_key_file_lines = file("keys.conf");
+	foreach ($a_key_file_lines  as $line_num => $line) {
+		$line = trim($line);
+		$pattern = "/[^=]+(?=\/email)/";
+		preg_match($pattern, $line, $matches);
+		array_push($a_key_list, $matches[0]);
+	}
+}
 
-function update_key_list($key_dir){
+function update_key_list($key_dir_name){
 	 if (! (isset($_SESSION['password']))){
 		 start_session('certs.php?action=create_server'); //TODO add cert name to line so don't have to refill form (see create_client_config_and_send)
 	 }
@@ -243,12 +249,15 @@ function update_key_list($key_dir){
 		 exit('Login Failed');
 	 }
 	//Now scanning the key directory for keys, and adding the names to keys.conf
+	read_config_file();
+	$cwd = getcwd();
 	$num_keys = 0;
 	//need to read index.txt and throw it in openvpngui dir so we can read and so we can extract key names.
-	$ssh->write("cat $key_dir\index.txt > key_list.txt\n");
 	$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
+	$output = $ssh->write("cp $key_dir_name/index.txt $cwd/keys.conf\n");
+	$output = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 	//list should now be stored in curr_work_dir, php will read, extract key names.
-	$key_filename = "key_list.txt";
+	$key_filename = "keys.conf";
 	$key_list = file($key_filename, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 	echo "<h3>Reading list of keys.... </h3><br />";
 	//Counting the keys in the keydir
@@ -273,16 +282,56 @@ function choose_key_send_method($cert_name, $key_dir, $config_dir, $cert_type){
 	?>
 	What do you want to do with your new key <?php echo $cert_name;?> ?<br />
 	If CLIENT key will bundle <?php echo $cert_name;?>.crt, <?php echo $cert_name;?>.key, your ca.crt and <?php echo $cert_name;?>.conf into a zip file.<br />
-	If SERVER key TODO
-	If CA key TODO
+	If SERVER key TODO <br />
+	If CA key TODO <br />
 	<div class="span 2">
 	<a class='btn btn-primary' href='certs.php?action=send_cert&type=nothing&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Do Nothing</a><br /><br />
 	<a class='btn btn-primary' href='certs.php?action=send_cert&type=copy&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Copy to OpenVPN Config Directory</a><br /><br />
-	<a class='btn btn-primary' href='certs.php?action=send_cert&type=scp&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>SCP to another box</a><br /><br />
+	<a class='btn btn-primary' onclick
+	<a class='btn btn-primary' href='certs.php?action=send_cert&type=scp&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Submit</a><br /><br />
 	<a class='btn btn-primary' href='certs.php?action=send_cert&type=download&cert_name=<?php echo $cert_name;?>&cert_type=<?php echo $cert_type;?>'>Give me a Download Link</a><br /><br />	
 	<?php
 	exit;
 }
+
+function create_default_client_config(){
+	?>
+	There is no default client configuration file!<br />
+	Will now create default client configuration file!<br />
+	<br />
+	Reading Server config file to generate client config file......<br />
+	<?php
+	//creating the default config file...
+	$client_config_file_default = "openvpn-client-default.conf";
+	//grabbing the settings we can from the server conf file
+	//TODO make sure openvpn is even running....
+	if ((file_exists($config_dir.$config_file)) and !(file_exists("openvpn-client-default.conf"))){
+		//read_config_file($config_dir.$config_file); //read config file....
+		$vpn_config = read_openvpn_config($config_dir.$config_file);
+		extract($vpn_config);
+		echo $config_dir.$config_file;
+		echo str_repeat(' ',1024*64); // flushing buffer
+		//Now writing the file.... 
+		//now the only lines we need to add to the default are the cert and key lines.....
+		//TODO! CHeck if comp-lzo is present in server config
+		file_put_contents($client_config_file_default, "client".PHP_EOL);
+		file_put_contents($client_config_file_default, "dev " . $dev_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "proto " . $proto_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);	
+		file_put_contents($client_config_file_default, "remote " . $remote_value." ".$port_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "resolv-retry infinite" .PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "nobind" .PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "persist-key" .PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "persist-tun" .PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "ca " . $ca_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "comp-lzo" .PHP_EOL, FILE_APPEND | LOCK_EX);
+		file_put_contents($client_config_file_default, "verb " . $verb_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
+		echo "Default file openvpn-client-default.conf created!<br />";
+	} 	
+	if (!(file_exists($config_dir.$config_file))){	//no config file for openvpn exists...
+		echo "Whoops.. no config found at $configdir.$config_file!<br />Exiting.....try the install file again??<br />";
+	}	
+}
+
 
 function create_client_config_and_send($cert_name, $config_dir, $config_file, $remote_value, $send_type, $key_dir_name){
 	//will need phpseclib later.... so...
@@ -302,41 +351,7 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 	//TODO have a check to make sure /etc/openvpn.conf exists....
 	//If none exists... then you should prolly do some checks when the webui is first launched.... duh
 	if (!(file_exists("openvpn-client-default.conf"))){
-		?>
-		There is no default client configuration file!<br />
-		Will now create default client configuration file!<br />
-		<br />
-		Reading Server config file to generate client config file......<br />
-		<?php
-		//creating the default config file...
-		$client_config_file_default = "openvpn-client-default.conf";
-		//grabbing the settings we can from the server conf file
-		//TODO make sure openvpn is even running....
-		if ((file_exists($config_dir.$config_file)) and !(file_exists("openvpn-client-default.conf"))){
-			//read_config_file($config_dir.$config_file); //read config file....
-			$vpn_config = read_openvpn_config($config_dir.$config_file);
-			extract($vpn_config);
-			echo $config_dir.$config_file;
-			echo str_repeat(' ',1024*64); // flushing buffer
-			//Now writing the file.... 
-			//now the only lines we need to add to the default are the cert and key lines.....
-			//TODO! CHeck if comp-lzo is present in server config
-			file_put_contents($client_config_file_default, "client".PHP_EOL);
-			file_put_contents($client_config_file_default, "dev " . $dev_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "proto " . $proto_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);	
-			file_put_contents($client_config_file_default, "remote " . $remote_value." ".$port_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "resolv-retry infinite" .PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "nobind" .PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "persist-key" .PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "persist-tun" .PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "ca " . $ca_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "comp-lzo" .PHP_EOL, FILE_APPEND | LOCK_EX);
-			file_put_contents($client_config_file_default, "verb " . $verb_values[1].PHP_EOL, FILE_APPEND | LOCK_EX);
-			echo "Default file openvpn-client-default.conf created!<br />";
-		} 	
-		if (!(file_exists($config_dir.$config_file))){	//no config file for openvpn exists...
-			echo "Whoops.. no config found at $configdir.$config_file!<br />Exiting.....try the install file again??<br />";
-		}	
+		create_default_client_config();
 	}
 	$vpn_config = read_openvpn_config($config_dir.$config_file);
 	extract($vpn_config);
@@ -390,17 +405,28 @@ function create_client_config_and_send($cert_name, $config_dir, $config_file, $r
 		exit;
 	}
 	if ($send_type == "scp"){
+		if (! (isset($_SESSION['password']))){
+		 start_session('certs.php?action=send_cert&type=$send_type&cert_name=$cert_name');
+		}
+		$password = stripslashes(trim($_SESSION['password']));
+		$username = stripslashes(trim($_SESSION['username']));
+		if ($username == ""){
+			$username = "root";
+			}
+		$ssh = new Net_SSH2('localhost');
+		if (!$ssh->login($username, $password)) {
+			exit('Login Failed');
+		}
 		echo "SCP transfer type selected!";
+		echo "TYPE TOO";
 		echo str_repeat(' ',1024*64);
 		$ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
-		//$ssh->write("ls\n");
 		$ssh->write("cd $curr_work_dir;scp $cert_name.zip $username@$remote_host:$remote_dir\n");
 		$ssh->setTimeout(10);
 		sleep(5);
 		$result = $ssh->read('/.*@.*[$|#]/', NET_SSH2_READ_REGEX);
 		echo "<pre>$result</pre>";
 		echo str_repeat(' ',1024*64);
-		echo "here!";
 		exit;
 	}
 		

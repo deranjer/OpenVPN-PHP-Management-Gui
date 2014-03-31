@@ -144,8 +144,8 @@ include('Net/SSH2.php');
 		<div class="span9"> 
 			<div class="row-fluid">
 				<?php
-
-
+				read_config_file();
+				update_key_list($key_dir_name);
 				if (file_exists("keys.conf")){
 					read_key_file();
 					echo "<table class=table table-striped>";

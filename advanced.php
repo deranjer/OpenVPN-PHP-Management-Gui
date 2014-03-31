@@ -5,7 +5,7 @@
         <link type="text/css" rel="stylesheet" href="css/bootstrap.css"/>
 </head>
 
-<body id="bhome">
+<body id="badvanced">
 
 		<div class="span9">
 			<div class="row-fluid">
