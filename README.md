@@ -4,7 +4,7 @@ OpenVPN-PHP-Gui
 MIT License - See LICENSE.txt
 
 OpenVPN-PHP-Gui is a php script to manage your openvpn installation.  
-This is geared for beginners that don't feel confortable on the command line.
+This is geared for beginners that don't feel comfortable on the command line.
 
 
 IMPORTANT:
