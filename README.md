@@ -1,4 +1,4 @@
-OpenVPN-PHP-Gui
+OpenVPN-PHP-Gui  - NO LONGER MAINTAINED
 =======================
 
 MIT License - See LICENSE.txt
